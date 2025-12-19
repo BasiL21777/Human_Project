@@ -1,0 +1,600 @@
+[
+  {
+    "v": 11,
+    "id": "cmj5ygwjb023ufg1k9bvw79xs",
+    "name": "Auth",
+    "folders": [],
+    "requests": [
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "LOGIN",
+        "method": "GET",
+        "params": [],
+        "headers": [],
+        "endpoint": "<<BASE_URL>>/auth/login",
+        "responses": {},
+        "testScript": "export {};\n// Set an environment variable\r\npw.env.set(\"refresh\", pm.response.json().refresh_token);\r\npw.env.set(\"access_token\", pm.response.json().access_token);\r\n",
+        "description": null,
+        "preRequestScript": "export {};\n",
+        "requestVariables": [],
+        "id": "cmj5ygzad0305h31kuxiythvx"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "addTo": "HEADERS",
+          "authType": "oauth-2",
+          "authActive": false,
+          "grantTypeInfo": {
+            "token": "",
+            "isPKCE": false,
+            "scopes": "openid",
+            "clientID": "frontend-app",
+            "grantType": "AUTHORIZATION_CODE",
+            "authEndpoint": "http://localhost:8080/realms/myrealm/protocol/openid-connect/auth",
+            "clientSecret": "",
+            "tokenEndpoint": "http://localhost:8080/realms/myrealm/protocol/openid-connect/token",
+            "authRequestParams": [],
+            "codeVerifierMethod": "S256",
+            "tokenRequestParams": [],
+            "refreshRequestParams": []
+          }
+        },
+        "body": {
+          "body": "{\n  \"code\": \"72d59163-e646-1f14-3040-db90b71af552.a08608a1-774e-b053-675f-01d718db14df.b30d4d9b-80b6-4725-b711-11327e2de594\",\n  \"redirect_uri\": \"http://localhost:9000/callback.html\"\n}\n",
+          "contentType": "application/json"
+        },
+        "name": "USER TOKEN ",
+        "method": "POST",
+        "params": [],
+        "headers": [],
+        "endpoint": "http://<<BASE_URL>>/api/auth/exchange-code",
+        "responses": {},
+        "testScript": "export {};\n\r\n\r\n// Set an environment variable\r\npw.env.set(\"jwt2\", pm.response.json().access_token);",
+        "description": null,
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj5yh6zx023vfg1k9qzo5qr2"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": "client_id: admin-cli\ngrant_type: password\nusername: Admin\npassword: admin",
+          "contentType": "application/x-www-form-urlencoded"
+        },
+        "name": "Admin_Token",
+        "method": "POST",
+        "params": [],
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": " application/x-www-form-urlencoded",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "http://localhost:8080/realms/master/protocol/openid-connect/token",
+        "responses": {},
+        "testScript": "export {};\n",
+        "description": "used when control the realm to import nerusers",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj5yhkgr0306h31kec3z73xx"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "Logout",
+        "method": "GET",
+        "params": [],
+        "headers": [],
+        "endpoint": "<<BASE_URL>>/auth/logout?refresh_token=<<refresh>>",
+        "responses": {},
+        "testScript": "",
+        "description": null,
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj69mt2k02gmfg1kwdispofp"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": "{\n  \"refresh_token\": \"<<refresh>>\"\n}",
+          "contentType": "application/json"
+        },
+        "name": "refresh",
+        "method": "POST",
+        "params": [],
+        "headers": [],
+        "endpoint": "<<BASE_URL>>/auth/refresh",
+        "responses": {},
+        "testScript": "export {};\n// Set an environment variable\r\npw.env.set(\"refresh\", pm.response.json().refresh_token);\r\npw.env.set(\"access_token\", pm.response.json().access_token);\r\n",
+        "description": null,
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj69myzo02gnfg1kknzmy950"
+      }
+    ],
+    "auth": {
+      "authType": "inherit",
+      "authActive": true
+    },
+    "headers": [],
+    "variables": [],
+    "description": null
+  },
+  {
+    "v": 11,
+    "id": "cmj69ivap02glfg1klkh26308",
+    "name": "Users",
+    "folders": [],
+    "requests": [
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "Get all users",
+        "method": "GET",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/api/users/",
+        "responses": {},
+        "testScript": "",
+        "description": "JUST Admin Can List all users except other admins \n",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj69ndwm02gpfg1k0gyolo5x"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "Delete user Details",
+        "method": "DELETE",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/api/users/693f43411892562f587392ae",
+        "responses": {},
+        "testScript": "",
+        "description": null,
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6esq1m0323fg1k3m8faiph"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": "{\n  \"role\": \"Doctor_ROLE\"\n}",
+          "contentType": "application/json"
+        },
+        "name": "Edit user Details",
+        "method": "PUT",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/api/users/69454b249478662deb1cbd16",
+        "responses": {},
+        "testScript": "",
+        "description": null,
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6etchr0324fg1kzutaoz2j"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "Get user Details",
+        "method": "GET",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/api/users/69454b249478662deb1cbd16",
+        "responses": {},
+        "testScript": "",
+        "description": null,
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6etjue0325fg1kzddye4hs"
+      }
+    ],
+    "auth": {
+      "authType": "inherit",
+      "authActive": true
+    },
+    "headers": [],
+    "variables": [],
+    "description": null
+  },
+  {
+    "v": 11,
+    "id": "cmj6flni4032gfg1k7htztwaf",
+    "name": "Appointment",
+    "folders": [],
+    "requests": [
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": "{\n  \"patient_id\": \"69454adb9478662deb1cbd0d\",\n  \"doctor_id\": \"69454b249478662deb1cbd16\",\n  \"appointment_date\": \"2025-01-20T10:00:00.000Z\",\n  \"reason\": \"Regular checkup\"\n}\n",
+          "contentType": "application/json"
+        },
+        "name": "create appointment",
+        "method": "POST",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/api/appointment/",
+        "responses": {},
+        "testScript": "",
+        "description": "Admin , patient can create appointment \ndoctor cant ",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6g6mkb032hfg1kuemfhhgw"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "Get All",
+        "method": "GET",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/api/appointment/",
+        "responses": {},
+        "testScript": "",
+        "description": "Just Admin can get all appointments \ndoctor,user cant ",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6gr7wa0527h31kz3mlirrd"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "Delete",
+        "method": "DELETE",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/api/appointment/69454eee9478662deb1cbd47",
+        "responses": {},
+        "testScript": "",
+        "description": "Just Admin can delete appointment \ndoctor , patient  cant ",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6gri5b0528h31kh234x7ix"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": "{\n  \"status\": \"completed\",\n  \"note\": \"Patient recovered well\"\n}\n",
+          "contentType": "application/json"
+        },
+        "name": "Update",
+        "method": "PUT",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/api/appointment/69454eee9478662deb1cbd47",
+        "responses": {},
+        "testScript": "",
+        "description": "Admin , Doctor can edit appointment \ndoctor can edit to say like (its done)\npatient cant ",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6hdcxf052ch31ktlcn9del"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "Get Details",
+        "method": "GET",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/api/appointment/69454eee9478662deb1cbd47",
+        "responses": {},
+        "testScript": "",
+        "description": "Admin , patient , doctor can getDetails  appointment \n note patient and doctor just access assigned ones not all ",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj7422p309yph31kc8ohtyob"
+      }
+    ],
+    "auth": {
+      "authType": "inherit",
+      "authActive": true
+    },
+    "headers": [],
+    "variables": [],
+    "description": null
+  },
+  {
+    "v": 11,
+    "id": "cmj6i3frx052kh31k3sw8nb7v",
+    "name": "Patient Records ",
+    "folders": [],
+    "requests": [
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": "{\n  \"patient_id\": \"693f43411892562f587392ae\",\n  \"doctor_id\": \"693ff91370259f86207a0539\",\n  \"diagnosis\": \"Flu and fever\",\n  \"prescription\": \"Paracetamol 500mg\",\n  \"notes\": \"Patient should rest for 3 days\",\n  \"is_draft\": true\n}\n",
+          "contentType": "application/json"
+        },
+        "name": "create patient record",
+        "method": "POST",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/patient_Record",
+        "responses": {},
+        "testScript": "",
+        "description": "Admin , doctor can create record\npatient cant ",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6i3q4h052lh31kosx6tpg0"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "update patient record",
+        "method": "DELETE",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/patient_Record/693f69446292872bda78c83b",
+        "responses": {},
+        "testScript": "",
+        "description": "just Admin delete record\n\npatient , doctor cant ",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6i4350052mh31k312qw5ks"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": "{\n  \"diagnosis\": \"Severe flu\",\n  \"prescription\": \"Tamiflu 75mg\",\n  \"notes\": \"Follow-up after 2 days\",\n  \"is_draft\": false\n}\n",
+          "contentType": "application/json"
+        },
+        "name": "update patient record",
+        "method": "PUT",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/patient_Record/693ffab470259f86207a0559",
+        "responses": {},
+        "testScript": "",
+        "description": "Admin , doctor can edit record\ndoctor can edit just he created not all \npatient cant ",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6i48k6052nh31k57l1ayi4"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "read details",
+        "method": "GET",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/patient_Record/693ffab470259f86207a0559",
+        "responses": {},
+        "testScript": "",
+        "description": "Admin , doctor , patient can read record\n but doctor and patient just assined ones not all\n",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6i4dyy032vfg1k414tchny"
+      },
+      {
+        "v": "17",
+        "auth": {
+          "authType": "inherit",
+          "authActive": true
+        },
+        "body": {
+          "body": null,
+          "contentType": null
+        },
+        "name": "read all",
+        "method": "GET",
+        "params": [],
+        "headers": [
+          {
+            "key": "Authorization",
+            "value": "Bearer <<access_token>>",
+            "active": true,
+            "description": ""
+          }
+        ],
+        "endpoint": "<<BASE_URL>>/patient_Record/",
+        "responses": {},
+        "testScript": "",
+        "description": "Admin can read all record\npatient , doctor  cant ",
+        "preRequestScript": "",
+        "requestVariables": [],
+        "id": "cmj6i4vid052oh31ki5szt88p"
+      }
+    ],
+    "auth": {
+      "authType": "inherit",
+      "authActive": true
+    },
+    "headers": [],
+    "variables": [],
+    "description": null
+  }
+]

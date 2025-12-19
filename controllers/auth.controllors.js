@@ -1,5 +1,23 @@
-require('dotenv').config();
-const { TOKEN_URL, LOGOUT_URL, axios } = require('../config/keycloak');
+require("dotenv").config();
+const axios = require("axios");
+const jwt = require("jsonwebtoken");
+const jwksClient = require("jwks-rsa");
+const syncUserFromKeycloak = require("../middelwares/userSync_DB");
+
+const KEYCLOAK_BASE_URL = `${process.env.KEYCLOAK_URL}/realms/${process.env.KEYCLOAK_REALM}`;
+const TOKEN_URL = `${KEYCLOAK_BASE_URL}/protocol/openid-connect/token`;
+const LOGOUT_URL = `${KEYCLOAK_BASE_URL}/protocol/openid-connect/logout`;
+
+const client = jwksClient({
+  jwksUri: `${KEYCLOAK_BASE_URL}/protocol/openid-connect/certs`
+});
+
+function getKey(header, callback) {
+  client.getSigningKey(header.kid, function (err, key) {
+    const signingKey = key.getPublicKey();
+    callback(null, signingKey);
+  });
+}
 
 // 1. Redirect user to Keycloak login
 exports.login = (req, res) => {
@@ -19,29 +37,41 @@ exports.callback = async (req, res) => {
   const { code } = req.query;
 
   if (!code) {
-    return res.status(400).json({ error: 'Authorization code missing' });
+    return res.status(400).json({ error: "Authorization code missing" });
   }
 
   try {
     const params = new URLSearchParams();
-    params.append('grant_type', 'authorization_code');
-    params.append('client_id', process.env.KEYCLOAK_CLIENT_ID);
-    params.append('client_secret', process.env.KEYCLOAK_CLIENT_SECRET);
-    params.append('code', code);
-    params.append('redirect_uri', process.env.KEYCLOAK_REDIRECT_URI);
+    params.append("grant_type", "authorization_code");
+    params.append("client_id", process.env.KEYCLOAK_CLIENT_ID);
+    params.append("client_secret", process.env.KEYCLOAK_CLIENT_SECRET);
+    params.append("code", code);
+    params.append("redirect_uri", process.env.KEYCLOAK_REDIRECT_URI);
 
     const response = await axios.post(TOKEN_URL, params);
 
+    const { access_token, refresh_token, id_token, expires_in } = response.data;
+
+    // ✅ Verify and decode ID token to get user info
+    jwt.verify(id_token, getKey, { algorithms: ["RS256"] }, async (err, decoded) => {
+      if (err) {
+        console.error("ID token verification failed:", err);
+      } else {
+        // ✅ Sync user into MongoDB immediately
+        await syncUserFromKeycloak(decoded);
+      }
+    });
+
     return res.status(200).json({
-      access_token: response.data.access_token,
-      refresh_token: response.data.refresh_token,
-      id_token: response.data.id_token,
-      expires_in: response.data.expires_in
+      access_token,
+      refresh_token,
+      id_token,
+      expires_in
     });
 
   } catch (err) {
-    console.error('Token exchange error:', err.response?.data || err.message);
-    return res.status(500).json({ error: 'Token exchange failed' });
+    console.error("Token exchange error:", err.response?.data || err.message);
+    return res.status(500).json({ error: "Token exchange failed" });
   }
 };
 
@@ -50,15 +80,15 @@ exports.refreshToken = async (req, res) => {
   const { refresh_token } = req.body;
 
   if (!refresh_token) {
-    return res.status(400).json({ error: 'Refresh token missing' });
+    return res.status(400).json({ error: "Refresh token missing" });
   }
 
   try {
     const params = new URLSearchParams();
-    params.append('grant_type', 'refresh_token');
-    params.append('client_id', process.env.KEYCLOAK_CLIENT_ID);
-    params.append('client_secret', process.env.KEYCLOAK_CLIENT_SECRET);
-    params.append('refresh_token', refresh_token);
+    params.append("grant_type", "refresh_token");
+    params.append("client_id", process.env.KEYCLOAK_CLIENT_ID);
+    params.append("client_secret", process.env.KEYCLOAK_CLIENT_SECRET);
+    params.append("refresh_token", refresh_token);
 
     const response = await axios.post(TOKEN_URL, params);
 
@@ -69,8 +99,8 @@ exports.refreshToken = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Refresh error:', err.response?.data || err.message);
-    return res.status(500).json({ error: 'Token refresh failed' });
+    console.error("Refresh error:", err.response?.data || err.message);
+    return res.status(500).json({ error: "Token refresh failed" });
   }
 };
 
@@ -79,21 +109,21 @@ exports.logout = async (req, res) => {
   const { refresh_token } = req.query;
 
   if (!refresh_token) {
-    return res.status(400).json({ error: 'Refresh token required for logout' });
+    return res.status(400).json({ error: "Refresh token required for logout" });
   }
 
   try {
     const params = new URLSearchParams();
-    params.append('client_id', process.env.KEYCLOAK_CLIENT_ID);
-    params.append('client_secret', process.env.KEYCLOAK_CLIENT_SECRET);
-    params.append('refresh_token', refresh_token);
+    params.append("client_id", process.env.KEYCLOAK_CLIENT_ID);
+    params.append("client_secret", process.env.KEYCLOAK_CLIENT_SECRET);
+    params.append("refresh_token", refresh_token);
 
     await axios.post(LOGOUT_URL, params);
 
-    return res.status(200).json({ message: 'Logged out successfully' });
+    return res.status(200).json({ message: "Logged out successfully" });
 
   } catch (err) {
-    console.error('Logout error:', err.response?.data || err.message);
-    return res.status(500).json({ error: 'Logout failed' });
+    console.error("Logout error:", err.response?.data || err.message);
+    return res.status(500).json({ error: "Logout failed" });
   }
 };

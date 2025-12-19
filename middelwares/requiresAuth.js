@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
 const syncUserFromKeycloak = require("../middelwares/userSync_DB");
 
-
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL;
 const REALM = process.env.KEYCLOAK_REALM;
 
@@ -33,18 +32,17 @@ module.exports = function requiresAuth() {
 
     const token = parts[1];
 
-jwt.verify(token, getKey, { algorithms: ["RS256"] }, async (err, decoded) => {
-  if (err) {
-    return res.status(401).json({ error: "Invalid or expired token" });
-  }
+    jwt.verify(token, getKey, { algorithms: ["RS256"] }, async (err, decoded) => {
+      if (err) {
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
 
-  req.user = decoded;
+      req.user = decoded;
 
-  // Sync user into MongoDB
-  await syncUserFromKeycloak(decoded);
+      // Sync user into MongoDB (update if exists, create if not)
+      await syncUserFromKeycloak(decoded);
 
-  next();
-});
-
+      next();
+    });
   };
 };
