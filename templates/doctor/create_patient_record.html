@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create Patient Record</title>
+  <style>
+    .admin-container {
+      max-width: 800px;
+      margin: 2rem auto;
+      background-color: #0a0a1a;
+      padding: 2rem 3rem;
+      border-radius: 15px;
+      box-shadow: 0 0 30px rgba(110, 0, 255, 0.3);
+      color: #e0f8ff;
+      font-family: 'Poppins', sans-serif;
+    }
+    h2 {
+      color: #6e00ff;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #00ff88;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      margin-bottom: 1.2rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background-color: #12122a;
+      color: #d0f7ff;
+      font-family: 'Poppins', sans-serif;
+    }
+    textarea { min-height: 100px; }
+    button {
+      display: inline-block;
+      padding: 0.8rem 1.5rem;
+      background: linear-gradient(135deg, #6e00ff, #00f0ff);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s ease;
+    }
+    button:hover { transform: translateY(-2px); }
+    .back-link {
+      display: inline-block;
+      margin-top: 1.5rem;
+      color: #6e00ff;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .back-link:hover { color: #00ff88; }
+  </style>
+</head>
+<body>
+<div class="admin-container">
+  <h2>Create Patient Record</h2>
+
+  <form id="recordForm">
+    <label for="patient_id">Select Patient</label>
+    <select id="patient_id" required>
+      <option value="">-- Choose Patient --</option>
+    </select>
+
+    <label for="diagnosis">Diagnosis</label>
+    <input type="text" id="diagnosis" required placeholder="Enter diagnosis">
+
+    <label for="prescription">Prescription</label>
+    <input type="text" id="prescription" required placeholder="Enter prescription">
+
+    <label for="notes">Notes</label>
+    <textarea id="notes" placeholder="Additional notes..."></textarea>
+
+    <label for="status">Status</label>
+    <select id="status">
+      <option value="draft">Draft</option>
+      <option value="published">Published</option>
+    </select>
+
+    <button type="submit">Save Record</button>
+  </form>
+
+  <a href="/doctor/dashboard.html" class="back-link">Back to Dashboard</a>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:5000";
+let currentDoctorId = null;
+
+// Decode token payload safely
+function getTokenPayload() {
+  const token = localStorage.getItem("access_token");
+  if (!token) return null;
+  try {
+    return JSON.parse(atob(token.split(".")[1]));
+  } catch {
+    return null;
+  }
+}
+
+// Resolve current doctor MongoDB _id by email from token
+async function resolveDoctorId() {
+  const token = localStorage.getItem("access_token");
+  const payload = getTokenPayload();
+  if (!payload) return null;
+  const email = payload.email || payload.preferred_username;
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    const users = Array.isArray(json.data) ? json.data : [];
+    const me = users.find(u => u.email === email && u.role === "Doctor_ROLE");
+    return me ? me._id : null;
+  } catch (err) {
+    console.error("Error resolving doctor ID:", err);
+    return null;
+  }
+}
+
+// Load patients into dropdown
+async function loadPatients() {
+  const token = localStorage.getItem("access_token");
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    const users = Array.isArray(json.data) ? json.data : [];
+
+    const select = document.getElementById("patient_id");
+    select.innerHTML = '<option value="">-- Choose Patient --</option>';
+
+    users
+      .filter(u => u.role === "Patient_ROLE" && u.is_active !== false)
+      .forEach(u => {
+        const opt = document.createElement("option");
+        opt.value = u._id;           // MongoDB _id
+        opt.textContent = u.email;   // visible email
+        select.appendChild(opt);
+      });
+  } catch (err) {
+    console.error("Error loading patients:", err);
+    alert("Failed to load patients list.");
+  }
+}
+
+// Submit handler: include doctor_id in body
+document.getElementById("recordForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const token = localStorage.getItem("access_token");
+
+  // Ensure we have currentDoctorId resolved
+  if (!currentDoctorId) {
+    currentDoctorId = await resolveDoctorId();
+    if (!currentDoctorId) {
+      alert("Could not resolve your doctor ID. Please re-login or check your account.");
+      return;
+    }
+  }
+
+  const body = {
+    patient_id: document.getElementById("patient_id").value,    // Mongo _id from select
+    doctor_id: currentDoctorId,                                  // resolved Mongo _id
+    diagnosis: document.getElementById("diagnosis").value,
+    prescription: document.getElementById("prescription").value,
+    notes: document.getElementById("notes").value,
+    is_draft: document.getElementById("status").value === "draft"
+  };
+
+  try {
+    const res = await fetch(`${BASE_URL}/patient_Record/`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (res.ok) {
+      alert("Patient record created successfully!");
+      window.location.href = "/doctor/dashboard.html";
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      alert("Error creating record: " + (errData.error || res.status));
+    }
+  } catch (err) {
+    console.error("Error creating record:", err);
+    alert("Unexpected error occurred.");
+  }
+});
+
+// Init
+(async function init() {
+  await loadPatients();
+  currentDoctorId = await resolveDoctorId();
+})();
+</script>
+</body>
+</html>

@@ -10,7 +10,7 @@ const appointmentAccess = require("../middelwares/appointmentAccess");
 router.get(
   "/",
   requiresAuth(),
-  requireRole(["Admin_ROLE"]),
+  // requireRole(["Admin_ROLE"]),
   appointmentController.getAllAppointments
 );
 
@@ -42,7 +42,7 @@ router.put(
 router.delete(
   "/:id",
   requiresAuth(),
-  requireRole(["Admin_ROLE"]),
+  requireRole(["Admin_ROLE","Patient_ROLE"]),
   appointmentController.deleteAppointment
 );
 

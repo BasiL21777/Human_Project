@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Patient Records</title>
+  <style>
+    .admin-container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      background-color: #0a0a1a;
+      padding: 2rem 3rem;
+      border-radius: 15px;
+      box-shadow: 0 0 30px rgba(110, 0, 255, 0.3);
+      color: #e0f8ff;
+      font-family: 'Poppins', sans-serif;
+    }
+    h2 {
+      color: #6e00ff;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    a, button {
+      color: #6e00ff;
+      font-weight: 600;
+      text-decoration: none;
+      user-select: none;
+      transition: color 0.3s ease;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+    }
+    a:hover, button:hover {
+      color: #00ff88;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #12122a;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(110, 0, 255, 0.2);
+      margin-bottom: 2rem;
+    }
+    th, td {
+      padding: 0.9rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      color: #d0f7ff;
+    }
+    th {
+      background-color: #1e1e40;
+      font-weight: 700;
+      color: #00ff88;
+    }
+    tbody tr:hover {
+      background-color: #2c2c5c;
+    }
+    .btn-create {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      padding: 0.6rem 1.2rem;
+      background-color: #6e00ff;
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+    .btn-create:hover {
+      background-color: #00ff88;
+      color: #0a0a1a;
+    }
+  </style>
+</head>
+<body>
+<div class="admin-container">
+  <h2>Patient Records</h2>
+
+  <!-- Button to redirect to create patient record page -->
+  <a href="/doctor/create_patient_record.html" class="btn-create">Create Patient Record</a>
+
+  <table id="recordsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Patient</th>
+        <th>Diagnosis</th>
+        <th>Prescription</th>
+        <th>Notes</th>
+        <th>Status</th>
+        <th>Created At</th>
+        <th>Updated At</th>
+      </tr>
+    </thead>
+    <tbody id="recordsBody"></tbody>
+  </table>
+  <p id="recordsEmpty">No patient records available.</p>
+
+  <p><a href="/doctor/dashboard.html">Back to Dashboard</a></p>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:5000";
+let currentDoctorId = null;
+
+function getTokenPayload() {
+  const token = localStorage.getItem("access_token");
+  if (!token) return null;
+  try {
+    return JSON.parse(atob(token.split(".")[1]));
+  } catch {
+    return null;
+  }
+}
+
+async function resolveDoctorId() {
+  const token = localStorage.getItem("access_token");
+  const payload = getTokenPayload();
+  if (!payload) return null;
+  const email = payload.email || payload.preferred_username;
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    const users = Array.isArray(json.data) ? json.data : [];
+    const me = users.find(u => u.email === email && u.role === "Doctor_ROLE");
+    return me ? me._id : null;
+  } catch (err) {
+    console.error("Error resolving doctor ID:", err);
+    return null;
+  }
+}
+
+async function loadRecords() {
+  const token = localStorage.getItem("access_token");
+  if (!currentDoctorId) {
+    currentDoctorId = await resolveDoctorId();
+  }
+
+  try {
+    const res = await fetch(`${BASE_URL}/patient_Record/`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    const records = Array.isArray(json.data) ? json.data : [];
+
+    // ✅ filter only records assigned to this doctor
+    const myRecords = records.filter(r => r.doctor_id?._id === currentDoctorId);
+
+    const table = document.getElementById("recordsTable");
+    const body = document.getElementById("recordsBody");
+    const empty = document.getElementById("recordsEmpty");
+    body.innerHTML = "";
+
+    if (myRecords.length === 0) {
+      table.style.display = "none";
+      empty.style.display = "block";
+      return;
+    }
+
+    table.style.display = "table";
+    empty.style.display = "none";
+
+    myRecords.forEach(r => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${r.patient_id?.email || "-"}</td>
+        <td>${r.diagnosis || "-"}</td>
+        <td>${r.prescription || "-"}</td>
+        <td>${r.notes || "-"}</td>
+        <td>${r.is_draft ? "Draft" : "Published"}</td>
+        <td>${r.created_at ? new Date(r.created_at).toLocaleString() : "-"}</td>
+        <td>${r.updated_at ? new Date(r.updated_at).toLocaleString() : "-"}</td>
+      `;
+      body.appendChild(row);
+    });
+  } catch (err) {
+    console.error("Error loading records:", err);
+  }
+}
+
+// Run on page load
+loadRecords();
+</script>
+</body>
+</html>

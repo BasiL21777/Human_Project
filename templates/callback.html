@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Callback</title>
+</head>
+<body>
+  <h2>Processing login...</h2>
+
+  <script>
+    const BASE_URL = "http://localhost:5000";
+
+    async function handleCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+
+      if (!code) {
+        alert("Authorization code missing");
+        return;
+      }
+
+      const res = await fetch(`${BASE_URL}/auth/callback?code=${code}`);
+      const data = await res.json();
+
+      console.log("Tokens:", data);
+
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
+
+      const payload = JSON.parse(atob(data.access_token.split(".")[1]));
+      const roles = payload.realm_access.roles;
+
+      if (roles.includes("Admin_ROLE")) {
+        window.location.href = "/admin/dashboard.html";
+      } else if (roles.includes("Doctor_ROLE")) {
+        window.location.href = "/doctor/dashboard.html";
+      } else if (roles.includes("Patient_ROLE")) {
+        window.location.href = "/patient/dashboard.html";
+      } else {
+        alert("No valid role found!");
+      }
+    }
+
+    handleCallback();
+  </script>
+</body>
+</html>

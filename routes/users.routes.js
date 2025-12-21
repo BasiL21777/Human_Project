@@ -8,7 +8,6 @@ const requireRole = require("../middelwares/requireRole");
 router.get(
   "/",
   requiresAuth(),
-  requireRole(["Admin_ROLE"]),
   usersController.getAllUsers
 );
 

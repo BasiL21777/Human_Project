@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Patient Dashboard</title>
+
+<style>
+    :root {
+        --neuro-primary: #6e00ff;
+        --neuro-secondary: #00f0ff;
+        --neuro-dark: #0a0a1a;
+        --neuro-light: #e0f8ff;
+        --neuro-success: #00ff88;
+        --neuro-danger: #ff3860;
+        --neuro-warning: #ffb400;
+        --neuro-glass: rgba(255, 255, 255, 0.08);
+        --neuro-glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: var(--neuro-dark);
+        color: var(--neuro-light);
+        min-height: 100vh;
+        margin: 0;
+        padding: 7rem 2rem 4rem;
+    }
+
+    /* Particle Background Effect */
+    .particles-background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        background: radial-gradient(ellipse at bottom, #0a0a1a 0%, #000000 100%);
+        overflow: hidden;
+    }
+
+    .particles-background::before {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><circle cx="50" cy="50" r="0.5" fill="white" opacity="0.2"/></svg>');
+        background-size: 2px 2px;
+        opacity: 0.3;
+        animation: particlesMove 100s linear infinite;
+    }
+
+    @keyframes particlesMove {
+        0% { background-position: 0 0; }
+        100% { background-position: 1000px 1000px; }
+    }
+
+    h2, h3 {
+        color: var(--neuro-secondary);
+        margin-bottom: 1.5rem;
+        position: relative;
+        padding-bottom: 0.5rem;
+    }
+
+    h2::after, h3::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 50px;
+        height: 3px;
+        background: linear-gradient(90deg, var(--neuro-primary), var(--neuro-secondary));
+        border-radius: 3px;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--neuro-light);
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+        width: 100%;
+        padding: 0.8rem 1rem;
+        background: var(--neuro-glass);
+        border: 1px solid var(--neuro-glass-border);
+        border-radius: 8px;
+        color: white;
+        font-family: 'Poppins', sans-serif;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
+    }
+
+    input:focus {
+        outline: none;
+        border-color: var(--neuro-primary);
+        box-shadow: 0 0 0 2px rgba(110, 0, 255, 0.3);
+    }
+
+    button {
+        background: linear-gradient(135deg, var(--neuro-primary), var(--neuro-secondary));
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        font-family: 'Poppins', sans-serif;
+        box-shadow: 0 4px 15px rgba(110, 0, 255, 0.3);
+    }
+      .btn-create {
+        background: linear-gradient(135deg, var(--neuro-primary), var(--neuro-secondary));
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        font-family: 'Poppins', sans-serif;
+        box-shadow: 0 4px 15px rgba(110, 0, 255, 0.3);
+    }
+    .btn-create:hover {
+       transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(110, 0, 255, 0.4);
+    }
+
+    button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(110, 0, 255, 0.4);
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        background: var(--neuro-glass);
+        border: 1px solid var(--neuro-glass-border);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .alert::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+    }
+
+    .alert-success {
+        border-left: 4px solid var(--neuro-success);
+    }
+
+    .alert-success::before {
+        background: var(--neuro-success);
+    }
+
+    .alert-error {
+        border-left: 4px solid var(--neuro-danger);
+    }
+
+    .alert-error::before {
+        background: var(--neuro-danger);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.5rem 0;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        background: var(--neuro-glass);
+        border: 1px solid var(--neuro-glass-border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    th, td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--neuro-glass-border);
+    }
+
+    th {
+        background: rgba(110, 0, 255, 0.1);
+        color: var(--neuro-secondary);
+        font-weight: 500;
+    }
+
+    tr:hover {
+        background: rgba(0, 240, 255, 0.03);
+    }
+
+    a {
+        color: var(--neuro-secondary);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    a:hover {
+        color: var(--neuro-primary);
+    }
+
+    a::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 0;
+        height: 1px;
+        background: var(--neuro-secondary);
+        transition: width 0.3s ease;
+    }
+
+    a:hover::after {
+        width: 100%;
+    }
+
+    /* Neuro Glass Panel */
+    .neuro-panel {
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        background: var(--neuro-glass);
+        border: 1px solid var(--neuro-glass-border);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Toggle Password Button */
+    .toggle-password {
+        background: rgba(0, 240, 255, 0.1);
+        border: 1px solid var(--neuro-glass-border);
+        color: var(--neuro-light);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        margin-left: 0.5rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .toggle-password:hover {
+        background: rgba(0, 240, 255, 0.2);
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: rgba(224, 248, 255, 0.5);
+    }
+</style>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div class="particles-background"></div>
+
+<div class="neuro-main">
+  <h2 id="welcome">Welcome!</h2>
+
+  <!-- Appointments -->
+  <div class="neuro-panel">
+    <h3>Your Appointments</h3>
+    <a href="/patient/book_appointment.html" class="btn-create">Book Appointment</a>
+
+    <table id="appointmentsTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>Doctor</th>
+          <th>Date</th>
+          <th>Reason</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="appointmentsBody"></tbody>
+    </table>
+    <div id="appointmentsEmpty" class="empty-state" style="display:none;">
+      <p>No appointments scheduled.</p>
+    </div>
+  </div>
+
+  <!-- Booking Form -->
+  <div id="bookingForm" class="neuro-panel" style="display:none;">
+    <h3>Book New Appointment</h3>
+    <form id="appointmentForm">
+      <label for="doctorSelect">Select Doctor</label>
+      <select id="doctorSelect" required></select>
+
+      <label for="appointmentDate">Date & Time</label>
+      <input type="datetime-local" id="appointmentDate" required>
+
+      <label for="reason">Reason</label>
+      <input type="text" id="reason" required placeholder="Enter reason">
+
+      <button type="submit" class="neuro-btn">Submit</button>
+      <button type="button" class="neuro-btn" onclick="hideBookingForm()">Cancel</button>
+    </form>
+  </div>
+
+  <!-- Patient Records -->
+  <div class="neuro-panel">
+    <h3>Your Records</h3>
+    <table id="recordsTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>Patient</th>
+          <th>Doctor</th>
+          <th>Diagnosis</th>
+          <th>Prescription</th>
+          <th>Notes</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody id="recordsBody"></tbody>
+    </table>
+    <div id="recordsEmpty" class="empty-state" style="display:none;">
+      <p>No records available.</p>
+    </div>
+  </div>
+
+  <button class="neuro-btn logout-btn" onclick="logout()">Logout</button>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:5000";
+let currentUserEmail = null;
+
+/* =========================
+   AUTH CHECK
+========================= */
+function checkAuth() {
+  const token = localStorage.getItem("access_token");
+  if (!token) {
+    window.location.href = "/auth/login.html";
+    return;
+  }
+  const payload = JSON.parse(atob(token.split(".")[1]));
+  const roles = payload.realm_access?.roles || [];
+  if (!roles.includes("Patient_ROLE")) {
+    alert("Unauthorized");
+    window.location.href = "/auth/login.html";
+    return;
+  }
+  currentUserEmail = payload.email || payload.preferred_username || null;
+  document.getElementById("welcome").textContent =
+    "Welcome, " + (currentUserEmail || "Patient") + "!";
+}
+
+/* =========================
+   SHOW/HIDE BOOKING FORM
+========================= */
+function showBookingForm() {
+  document.getElementById("bookingForm").style.display = "block";
+  loadDoctors();
+}
+function hideBookingForm() {
+  document.getElementById("bookingForm").style.display = "none";
+}
+
+/* =========================
+   LOAD DOCTORS FOR SELECT
+========================= */
+async function loadDoctors() {
+  const token = localStorage.getItem("access_token");
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    const users = Array.isArray(json.data) ? json.data : [];
+    const doctors = users.filter(u => u.role === "Doctor_ROLE");
+
+    const select = document.getElementById("doctorSelect");
+    select.innerHTML = '<option value="">-- Choose Doctor --</option>';
+    doctors.forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d._id;
+      opt.textContent = d.email;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    console.error("Error loading doctors:", err);
+  }
+}
+
+/* =========================
+   SUBMIT NEW APPOINTMENT
+========================= */
+document.getElementById("appointmentForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const token = localStorage.getItem("access_token");
+
+  const body = {
+    doctor_id: document.getElementById("doctorSelect").value,
+    appointment_date: document.getElementById("appointmentDate").value,
+    reason: document.getElementById("reason").value,
+    status: "scheduled"
+  };
+
+  try {
+    const res = await fetch(`${BASE_URL}/api/appointment/`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      alert("Appointment booked successfully!");
+      hideBookingForm();
+      loadAppointments();
+    } else {
+      const errData = await res.json();
+      alert("Error booking appointment: " + (errData.error || res.status));
+    }
+  } catch (err) {
+    console.error("Error booking appointment:", err);
+    alert("Unexpected error occurred.");
+  }
+});
+
+/* =========================
+   LOAD APPOINTMENTS
+========================= */
+async function loadAppointments() {
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(`${BASE_URL}/api/appointment/`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const json = await res.json();
+  const appointments = Array.isArray(json.data) ? json.data : [];
+
+  // ✅ Filter only appointments belonging to the current patient
+  const myAppointments = currentUserEmail
+    ? appointments.filter(app => app.patient_id?.email === currentUserEmail)
+    : appointments;
+
+  const table = document.getElementById("appointmentsTable");
+  const body = document.getElementById("appointmentsBody");
+  const empty = document.getElementById("appointmentsEmpty");
+  body.innerHTML = "";
+
+  if (myAppointments.length === 0) {
+    table.style.display = "none";
+    empty.style.display = "block";
+    return;
+  }
+
+  table.style.display = "table";
+  empty.style.display = "none";
+
+  myAppointments.forEach(app => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${app.doctor_id?.email || "-"}</td>
+      <td>${app.appointment_date ? new Date(app.appointment_date).toLocaleString() : "-"}</td>
+      <td>${app.reason || "-"}</td>
+      <td>${app.status || "-"}</td>
+      <td>
+        ${app.status === "scheduled"
+          ? `<button onclick="cancelAppointment('${app._id}')">Cancel</button>`
+          : "&mdash;"}
+      </td>
+    `;
+    body.appendChild(row);
+  });
+}
+
+
+/* =========================
+   CANCEL APPOINTMENT
+========================= */
+async function cancelAppointment(id) {
+  if (!confirm("Cancel appointment?")) return;
+  const token = localStorage.getItem("access_token");
+  await fetch(`${BASE_URL}/api/appointment/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  loadAppointments();
+}
+
+/* =========================
+   LOAD PATIENT RECORDS
+========================= */
+async function loadRecords() {
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(`${BASE_URL}/patient_Record/`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const json = await res.json();
+  const records = Array.isArray(json.data) ? json.data : [];
+
+  const userRecords = currentUserEmail
+    ? records.filter(r => r.patient_id?.email === currentUserEmail)
+    : records;
+
+  const table = document.getElementById("recordsTable");
+  const body = document.getElementById("recordsBody");
+  const empty = document.getElementById("recordsEmpty");
+  body.innerHTML = "";
+
+  if (userRecords.length === 0) {
+    table.style.display = "none";
+    empty.style.display = "block";
+    return;
+  }
+
+  table.style.display = "table";
+  empty.style.display = "none";
+
+  userRecords.forEach(r => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${r.patient_id?.email || "-"}</td>
+      <td>${r.doctor_id?.email || "-"}</td>
+      <td>${r.diagnosis || "-"}</td>
+      <td>${r.prescription || "-"}</td>
+      <td>${r.notes || "-"}</td>
+      <td>${r.is_draft ? "Draft" : "Published"}</td>
+      <td>${r.created_at ? new Date(r.created_at).toLocaleString() : "-"}</td>
+      <td>${r.updated_at ? new Date(r.updated_at).toLocaleString() : "-"}</td>
+    `;
+    body.appendChild(row);
+  });
+}
+
+/* =========================
+   LOGOUT
+========================= */
+async function logout() {
+  const refreshToken = localStorage.getItem("refresh_token");
+  try {
+    if (refreshToken) {
+      await fetch(`${BASE_URL}/auth/logout?refresh_token=${refreshToken}`);
+    }
+  } catch (err) {
+    console.error("Logout error:", err);
+  }
+  localStorage.clear();
+  window.location.href = "/auth/login.html";
+}
+
+/* =========================
+   INIT
+========================= */
+checkAuth();
+loadAppointments();
+loadRecords();
+</script>
+</body>
+</html>

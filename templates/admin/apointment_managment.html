@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage Appointments</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .admin-container {
+      background-color: var(--neuro-dark, #0a0a1a);
+      color: var(--neuro-light, #e0f8ff);
+      padding: 2rem 3rem;
+      min-height: 70vh;
+      font-family: 'Poppins', sans-serif;
+    }
+    h1 { color: var(--neuro-primary, #6e00ff); user-select: none; }
+    .table-responsive { max-width:100%; overflow-x:auto; }
+    .appointment-table { width:100%; border-collapse:collapse; font-size:0.95rem;
+      box-shadow:0 0 30px rgba(110,0,255,0.15); border-radius:15px; overflow:hidden; }
+    .appointment-table thead { background-color:var(--neuro-primary,#6e00ff); color:var(--neuro-dark,#0a0a1a); }
+    .appointment-table th,.appointment-table td { padding:0.75rem 1.25rem; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1); }
+    .appointment-table tbody tr:hover { background-color:rgba(110,0,255,0.1); }
+    .badge-success { background-color:#00ff88; color:#0a0a1a; padding:0.3rem 0.6rem; border-radius:12px; }
+    .badge-danger { background-color:#ff3860; color:#fff; padding:0.3rem 0.6rem; border-radius:12px; }
+    .btn-sm { padding:0.3rem 0.8rem; border-radius:20px; font-size:0.8rem; margin-right:0.3rem; cursor:pointer; border:none; }
+    .btn-info { background-color:#00f0ff; color:#0a0a1a; }
+    .btn-delete { background-color:#ff1444; color:#fff; }
+  </style>
+</head>
+<body>
+<div class="admin-container">
+  <h1>Manage Appointments</h1>
+
+  <!-- Appointment Table -->
+  <div class="table-responsive">
+    <table class="appointment-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Patient</th>
+          <th>Doctor</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="appointmentsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:5000";
+
+async function loadAppointments(){
+  const token = localStorage.getItem("access_token");
+  try {
+    const res = await fetch(`${BASE_URL}/api/appointment/`, {
+      headers:{ Authorization:`Bearer ${token}` }
+    });
+    const json = await res.json();
+    const appointments = json.data || [];
+    const body = document.getElementById("appointmentsBody");
+    body.innerHTML = "";
+    appointments.forEach(a=>{
+      const statusBadge = a.status === "completed"
+        ? '<span class="badge-success">Completed</span>'
+        : '<span class="badge-danger">'+a.status+'</span>';
+
+      const actionBtns = `
+        <button class="btn-sm btn-info" onclick="showDetails('${a._id}')">Details</button>
+        <button class="btn-sm btn-delete" onclick="deleteAppointment('${a._id}')">Delete</button>
+      `;
+
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${a._id}</td>
+        <td>${a.patient_id?.email || ''}</td>
+        <td>${a.doctor_id?.email || ''}</td>
+        <td>${a.appointment_date ? new Date(a.appointment_date).toLocaleString() : ''}</td>
+        <td>${statusBadge}</td>
+        <td>${a.created_at ? new Date(a.created_at).toLocaleDateString() : ''}</td>
+        <td>${actionBtns}</td>
+      `;
+      body.appendChild(row);
+    });
+  } catch(err){ console.error("Error loading appointments:", err); }
+}
+
+async function deleteAppointment(id){
+  const token = localStorage.getItem("access_token");
+  if(!confirm("Are you sure you want to delete this appointment?")) return;
+  try {
+    const res = await fetch(`${BASE_URL}/api/appointment/${id}`, {
+      method:"DELETE",
+      headers:{ Authorization:`Bearer ${token}` }
+    });
+    if(res.ok){
+      alert("Appointment deleted successfully");
+      loadAppointments();
+    } else {
+      const errData = await res.json();
+      alert("Error deleting appointment: "+errData.error);
+    }
+  } catch(err){ console.error("Delete error:", err); }
+}
+
+function showDetails(id){
+  // Redirect to appointment_details.html with the appointment ID in the query string
+  window.location.href = `/admin/appointment_details.html?id=${id}`;
+}
+
+// Run on page load
+loadAppointments();
+</script>
+</body>
+</html>

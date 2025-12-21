@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --neuro-primary:#6e00ff;--neuro-secondary:#00f0ff;--neuro-dark:#0a0a1a;--neuro-light:#e0f8ff;
+      --neuro-success:#00ff88;--neuro-danger:#ff3860;--neuro-warning:#ffb400;
+      --neuro-glass:rgba(255,255,255,0.08);--neuro-glass-border:rgba(255,255,255,0.2);
+    }
+    body{background-color:var(--neuro-dark);color:var(--neuro-light);font-family:'Poppins',sans-serif;margin:0;padding:2rem;}
+    .dashboard-title{font-size:2.8rem;margin-bottom:2rem;color:var(--neuro-primary);}
+    .stats-grid{display:flex;gap:2rem;margin-bottom:3rem;flex-wrap:wrap;}
+    .stat-card{flex:1;min-width:200px;background:var(--neuro-glass);border:1px solid var(--neuro-glass-border);
+      border-radius:15px;padding:1.5rem 2rem;box-shadow:0 0 20px rgba(110,0,255,0.2);}
+    .stat-card h3{margin:0 0 1rem;color:var(--neuro-secondary);}
+    .stat-card p{font-size:2.4rem;font-weight:700;margin:0;color:var(--neuro-light);}
+    .green{border-color:var(--neuro-success);} .blue{border-color:var(--neuro-secondary);} .orange{border-color:var(--neuro-warning);}
+    .btn{display:inline-block;padding:0.75rem 1.5rem;margin:0.5rem;border-radius:30px;font-weight:600;color:white;text-decoration:none;}
+    .btn.green{background:var(--neuro-success);} .btn.blue{background:var(--neuro-secondary);} .btn.warning{background:var(--neuro-warning);}
+    .logout-btn{background:linear-gradient(135deg,var(--neuro-danger),#ff1444);color:white;padding:0.6rem 1.2rem;border:none;border-radius:8px;cursor:pointer;margin-top:1rem;}
+  </style>
+</head>
+<body>
+  <h1 class="dashboard-title">🛡️ Admin Dashboard</h1>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid">
+    <div class="stat-card green"><h3>Total Users</h3><p id="usersCount">0</p></div>
+    <div class="stat-card blue"><h3>Medical Records</h3><p id="recordsCount">0</p></div>
+    <div class="stat-card orange"><h3>Appointments</h3><p id="appointmentsCount">0</p></div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <a href="/admin/user_management.html" class="btn green">👤 Manage Users</a>
+    <a href="/admin/patientRecord_managment.html" class="btn blue">🔐 Manage Patient Records</a>
+    <a href="/admin/apointment_managment.html" class="btn warning">📋 Manage Appointments </a>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+
+<script>
+const BASE_URL="http://localhost:5000";
+
+function checkAuth(){
+  const token=localStorage.getItem("access_token");
+  if(!token){window.location.href="/auth/login.html";return;}
+  const payload=JSON.parse(atob(token.split(".")[1]));
+  const roles=payload.realm_access?.roles||[];
+  if(!roles.includes("Admin_ROLE")){alert("Unauthorized");window.location.href="/auth/login.html";}
+}
+
+async function loadStats(){
+  const token = localStorage.getItem("access_token");
+
+  try {
+    // Fetch users
+    const usersRes = await fetch(`${BASE_URL}/api/users/`, {
+      headers:{Authorization:`Bearer ${token}`}
+    });
+    const usersJson = await usersRes.json();
+    const usersCount = usersJson.results || (usersJson.data ? usersJson.data.length : 0);
+    document.getElementById("usersCount").textContent = usersCount;
+
+    // Fetch appointments
+    const appsRes = await fetch(`${BASE_URL}/api/appointment/`, {
+      headers:{Authorization:`Bearer ${token}`}
+    });
+    const appsJson = await appsRes.json();
+    const appointmentsCount = appsJson.results || (appsJson.data ? appsJson.data.length : 0);
+    document.getElementById("appointmentsCount").textContent = appointmentsCount;
+
+    // Fetch records
+    const recRes = await fetch(`${BASE_URL}/patient_Record/`, {
+      headers:{Authorization:`Bearer ${token}`}
+    });
+    const recJson = await recRes.json();
+    const recordsCount = recJson.results || (recJson.data ? recJson.data.length : 0);
+    document.getElementById("recordsCount").textContent = recordsCount;
+
+  } catch (err) {
+    console.error("Error loading stats:", err);
+  }
+}
+
+
+async function logout(){
+  const refreshToken=localStorage.getItem("refresh_token");
+  if(!refreshToken){alert("No refresh token");return;}
+  const res=await fetch(`${BASE_URL}/auth/logout?refresh_token=${refreshToken}`);
+  const data=await res.json();
+  if(res.ok){
+    localStorage.removeItem("access_token");localStorage.removeItem("refresh_token");
+    alert("Logged out successfully");window.location.href="/auth/login.html";
+  }else{alert("Logout failed: "+data.error);}
+}
+
+// Run on page load
+window.addEventListener("DOMContentLoaded", () => {
+  checkAuth();
+  loadStats();
+});
+</script>
+</body>
+</html>

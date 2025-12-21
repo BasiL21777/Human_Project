@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book Appointment</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --neuro-primary: #6e00ff;
+      --neuro-secondary: #00f0ff;
+      --neuro-dark: #0a0a1a;
+      --neuro-light: #e0f8ff;
+      --neuro-success: #00ff88;
+      --neuro-danger: #ff3860;
+      --neuro-warning: #ffb400;
+      --neuro-glass: rgba(255, 255, 255, 0.08);
+      --neuro-glass-border: rgba(255, 255, 255, 0.2);
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--neuro-dark);
+      color: var(--neuro-light);
+      min-height: 100vh;
+      margin: 0;
+      padding: 7rem 2rem 4rem;
+    }
+    .particles-background {position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;
+      background:radial-gradient(ellipse at bottom,#0a0a1a 0%,#000000 100%);}
+    h2 {color:var(--neuro-secondary);margin-bottom:1.5rem;position:relative;padding-bottom:0.5rem;font-size:1.8rem;}
+    h2::after {content:'';position:absolute;bottom:0;left:0;width:50px;height:3px;
+      background:linear-gradient(90deg,var(--neuro-primary),var(--neuro-secondary));border-radius:3px;}
+    .neuro-panel {backdrop-filter:blur(16px);background:var(--neuro-glass);border:1px solid var(--neuro-glass-border);
+      border-radius:16px;padding:2rem;margin-bottom:2rem;}
+    .form-group {margin-bottom:1.5rem;}
+    label {display:block;margin-bottom:0.5rem;color:var(--neuro-light);font-size:0.9rem;opacity:0.8;}
+    select,input,textarea {width:100%;padding:0.8rem 1rem;background:var(--neuro-glass);
+      border:1px solid var(--neuro-glass-border);border-radius:8px;color:white;font-family:'Poppins',sans-serif;}
+    textarea {min-height:120px;resize:vertical;}
+    .neuro-btn {display:inline-flex;align-items:center;gap:0.5rem;
+      background:linear-gradient(135deg,var(--neuro-primary),var(--neuro-secondary));
+      color:white;padding:0.8rem 1.5rem;border:none;border-radius:8px;cursor:pointer;margin-top:1rem;}
+    .neuro-btn:hover {transform:translateY(-2px);}
+    .back-link {display:inline-flex;align-items:center;gap:0.5rem;margin-top:1.5rem;color:var(--neuro-secondary);}
+    .back-link:hover {color:var(--neuro-primary);}
+    @media(min-width:768px){.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}}
+    .logout-btn {display:inline-flex;align-items:center;gap:0.5rem;
+      background:linear-gradient(135deg,var(--neuro-danger),#ff1444);
+      color:white;padding:0.6rem 1.2rem;border:none;border-radius:8px;cursor:pointer;margin-top:1rem;}
+    .logout-btn:hover {transform:translateY(-2px);}
+  </style>
+
+</head>
+<body>
+<div class="particles-background"></div>
+<div class="neuro-main">
+  <h2>Book a New Appointment</h2>
+  <div class="neuro-panel">
+    <form id="appointmentForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="doctor_id"><i class="fas fa-user-md"></i> Doctor</label>
+          <select id="doctor_id" required></select>
+        </div>
+        <div class="form-group">
+          <label for="appointment_date"><i class="fas fa-calendar-alt"></i> Date and Time</label>
+          <input type="datetime-local" id="appointment_date" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="reason"><i class="fas fa-comment-medical"></i> Reason</label>
+        <textarea id="reason" placeholder="Please describe the reason for your visit..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="note"><i class="fas fa-sticky-note"></i> Additional Notes</label>
+        <textarea id="note" placeholder="Enter any additional information..."></textarea>
+      </div>
+      <button type="submit" class="neuro-btn"><i class="fas fa-calendar-check"></i> Book Appointment</button>
+    </form>
+    <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+  <a href="/patient/dashboard.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Appointments</a>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:5000";
+
+// Guard: only patients
+function checkAuth() {
+  const token = localStorage.getItem("access_token");
+  if (!token) { window.location.href = "/auth/login.html"; return; }
+  const payload = JSON.parse(atob(token.split(".")[1]));
+  const roles = payload.realm_access?.roles || [];
+  if (!roles.includes("Patient_ROLE")) {
+    alert("Unauthorized access"); window.location.href = "/auth/login.html";
+  }
+}
+
+// Load doctors into select
+async function loadDoctors() {
+  const token = localStorage.getItem("access_token");
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const json = await res.json();
+    const users = json.data || [];
+    const select = document.getElementById("doctor_id");
+    select.innerHTML = '<option value="">-- Select Doctor --</option>';
+    users
+      .filter(u => u.role === "Doctor_ROLE" && u.is_active)
+      .forEach(u => {
+        const opt = document.createElement("option");
+        opt.value = u._id;
+        opt.textContent = u.email;
+        select.appendChild(opt);
+      });
+  } catch (err) {
+    console.error("Error loading doctors:", err);
+    alert("Failed to load doctors list");
+  }
+}
+
+// Resolve patient MongoDB _id from /api/users/
+async function getPatientId(token) {
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const json = await res.json();
+    const users = json.data || [];
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const email = payload.email || payload.preferred_username;
+    const patientUser = users.find(u => u.email === email && u.role === "Patient_ROLE");
+    return patientUser ? patientUser._id : null;
+  } catch (err) {
+    console.error("Error resolving patient ID:", err);
+    return null;
+  }
+}
+
+// Handle form submit
+document.getElementById("appointmentForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const token = localStorage.getItem("access_token");
+  const patientId = await getPatientId(token);
+
+  if (!patientId) {
+    alert("Could not resolve patient ID");
+    return;
+  }
+
+  const dateInput = document.getElementById("appointment_date").value;
+  const appointmentDate = new Date(dateInput).toISOString();
+
+  const body = {
+    patient_id: patientId,
+    doctor_id: document.getElementById("doctor_id").value,
+    appointment_date: appointmentDate,
+    reason: document.getElementById("reason").value
+  };
+
+  try {
+    const res = await fetch(`${BASE_URL}/api/appointment/`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      alert("Appointment booked successfully!");
+      window.location.href = "/patient/dashboard.html";
+    } else {
+      const errData = await res.json();
+      alert("Error booking appointment: " + (errData.error || res.status));
+    }
+  } catch (err) {
+    console.error("Error booking appointment:", err);
+  }
+});
+
+// Logout function
+async function logout() {
+  const refreshToken = localStorage.getItem("refresh_token");
+  if (!refreshToken) {
+    alert("No refresh token found");
+    return;
+  }
+  try {
+    const res = await fetch(`${BASE_URL}/auth/logout?refresh_token=${refreshToken}`);
+    const data = await res.json();
+    if (res.ok) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      alert("Logged out successfully");
+      window.location.href = "/auth/login.html";
+    } else {
+      alert("Logout failed: " + data.error);
+    }
+  } catch (err) {
+    console.error("Logout error:", err);
+  }
+}
+
+// Run on page load
+checkAuth();
+loadDoctors();
+</script>

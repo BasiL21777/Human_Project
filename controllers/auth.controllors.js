@@ -44,30 +44,28 @@ exports.callback = async (req, res) => {
     const params = new URLSearchParams();
     params.append("grant_type", "authorization_code");
     params.append("client_id", process.env.KEYCLOAK_CLIENT_ID);
-    params.append("client_secret", process.env.KEYCLOAK_CLIENT_SECRET);
+    if (process.env.KEYCLOAK_CLIENT_SECRET) {
+      params.append("client_secret", process.env.KEYCLOAK_CLIENT_SECRET);
+    }
     params.append("code", code);
     params.append("redirect_uri", process.env.KEYCLOAK_REDIRECT_URI);
 
-    const response = await axios.post(TOKEN_URL, params);
+    const response = await axios.post(TOKEN_URL, params, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    });
+
+    console.log("Keycloak token response:", response.data);
 
     const { access_token, refresh_token, id_token, expires_in } = response.data;
 
-    // ✅ Verify and decode ID token to get user info
+    // Verify and decode ID token to get user info
     jwt.verify(id_token, getKey, { algorithms: ["RS256"] }, async (err, decoded) => {
-      if (err) {
-        console.error("ID token verification failed:", err);
-      } else {
-        // ✅ Sync user into MongoDB immediately
+      if (!err) {
         await syncUserFromKeycloak(decoded);
       }
     });
 
-    return res.status(200).json({
-      access_token,
-      refresh_token,
-      id_token,
-      expires_in
-    });
+    return res.json({ access_token, refresh_token, id_token, expires_in });
 
   } catch (err) {
     console.error("Token exchange error:", err.response?.data || err.message);
@@ -87,12 +85,16 @@ exports.refreshToken = async (req, res) => {
     const params = new URLSearchParams();
     params.append("grant_type", "refresh_token");
     params.append("client_id", process.env.KEYCLOAK_CLIENT_ID);
-    params.append("client_secret", process.env.KEYCLOAK_CLIENT_SECRET);
+    if (process.env.KEYCLOAK_CLIENT_SECRET) {
+      params.append("client_secret", process.env.KEYCLOAK_CLIENT_SECRET);
+    }
     params.append("refresh_token", refresh_token);
 
-    const response = await axios.post(TOKEN_URL, params);
+    const response = await axios.post(TOKEN_URL, params, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    });
 
-    return res.status(200).json({
+    return res.json({
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token,
       expires_in: response.data.expires_in
@@ -115,12 +117,16 @@ exports.logout = async (req, res) => {
   try {
     const params = new URLSearchParams();
     params.append("client_id", process.env.KEYCLOAK_CLIENT_ID);
-    params.append("client_secret", process.env.KEYCLOAK_CLIENT_SECRET);
+    if (process.env.KEYCLOAK_CLIENT_SECRET) {
+      params.append("client_secret", process.env.KEYCLOAK_CLIENT_SECRET);
+    }
     params.append("refresh_token", refresh_token);
 
-    await axios.post(LOGOUT_URL, params);
+    await axios.post(LOGOUT_URL, params, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    });
 
-    return res.status(200).json({ message: "Logged out successfully" });
+    return res.json({ message: "Logged out successfully" });
 
   } catch (err) {
     console.error("Logout error:", err.response?.data || err.message);

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Appointment Details</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .admin-container {
+      background-color: var(--neuro-dark, #0a0a1a);
+      color: var(--neuro-light, #e0f8ff);
+      padding: 2rem 3rem;
+      min-height: 70vh;
+      font-family: 'Poppins', sans-serif;
+    }
+    h1 { color: var(--neuro-primary, #6e00ff); user-select: none; }
+    .table-responsive { max-width:100%; overflow-x:auto; margin-top:2rem; }
+    .details-table { width:100%; border-collapse:collapse; font-size:0.95rem;
+      box-shadow:0 0 30px rgba(110,0,255,0.15); border-radius:15px; overflow:hidden; }
+    .details-table th,.details-table td { padding:0.75rem 1.25rem; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1); }
+    .details-table tbody tr:hover { background-color:rgba(110,0,255,0.1); }
+    .btn-primary { background-color:#00ff88; color:#0a0a1a; border:none; padding:0.65rem 2rem; border-radius:30px; font-weight:700; cursor:pointer; margin-top:1rem; }
+    .btn-primary:hover { background-color:#00cc6a; }
+    input, select { width:100%; padding:0.4rem; border-radius:8px; border:1px solid #ccc; }
+  </style>
+</head>
+<body>
+<div class="admin-container">
+  <h1>Appointment Details</h1>
+
+  <div class="table-responsive">
+    <table class="details-table">
+      <thead>
+        <tr><th>Field</th><th>Value</th></tr>
+      </thead>
+      <tbody id="detailsBody"></tbody>
+    </table>
+  </div>
+  <button class="btn-primary" onclick="applyChanges()">Apply Changes</button>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:5000";
+const params = new URLSearchParams(window.location.search);
+const appointmentId = params.get("id");
+let appointmentData = {};
+let usersList = [];
+
+async function loadUsers(){
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(`${BASE_URL}/api/users/`, {
+    headers:{ Authorization:`Bearer ${token}` }
+  });
+  const json = await res.json();
+  usersList = json.data || [];
+  console.log(json)
+}
+
+function buildSelect(users, currentId){
+  return users.map(u =>
+    `<option value="${u._id}" ${u._id===currentId?'selected':''}>${u.email}</option>`
+  ).join('');
+}
+
+async function loadAppointment(){
+  const token = localStorage.getItem("access_token");
+  if(!appointmentId){ alert("No appointment ID provided"); return; }
+  const res = await fetch(`${BASE_URL}/api/appointment/${appointmentId}`, {
+    headers:{ Authorization:`Bearer ${token}` }
+  });
+  const json = await res.json();
+  appointmentData = json.data;
+
+  const patients = usersList.filter(u => u.role==="Patient_ROLE");
+  const doctors  = usersList.filter(u => u.role==="Doctor_ROLE");
+
+  const body = document.getElementById("detailsBody");
+  body.innerHTML = `
+    <tr><td>ID</td><td>${appointmentData._id}</td></tr>
+    <tr><td>Patient</td><td>
+      <select id="patient_id">${buildSelect(patients, appointmentData.patient_id?._id)}</select>
+    </td></tr>
+    <tr><td>Doctor</td><td>
+      <select id="doctor_id">${buildSelect(doctors, appointmentData.doctor_id?._id)}</select>
+    </td></tr>
+    <tr><td>Date</td><td>
+      <input type="datetime-local" id="appointment_date"
+        value="${appointmentData.appointment_date ? new Date(appointmentData.appointment_date).toISOString().slice(0,16) : ''}">
+    </td></tr>
+    <tr><td>Status</td><td>
+      <select id="status">
+        <option value="scheduled" ${appointmentData.status==="scheduled"?"selected":""}>Scheduled</option>
+        <option value="completed" ${appointmentData.status==="completed"?"selected":""}>Completed</option>
+        <option value="canceled"  ${appointmentData.status==="canceled" ?"selected":""}>Canceled</option>
+      </select>
+    </td></tr>
+    <tr><td>Reason</td><td><input type="text" id="reason" value="${appointmentData.reason||''}"></td></tr>
+    <tr><td>Created</td><td>${appointmentData.created_at ? new Date(appointmentData.created_at).toLocaleDateString() : ''}</td></tr>
+  `;
+}
+
+async function applyChanges(){
+  const token = localStorage.getItem("access_token");
+  const updated = {
+    patient_id: document.getElementById("patient_id").value,
+    doctor_id: document.getElementById("doctor_id").value,
+    appointment_date: document.getElementById("appointment_date").value,
+    status: document.getElementById("status").value,
+    reason: document.getElementById("reason").value
+  };
+  const res = await fetch(`${BASE_URL}/api/appointment/${appointmentId}`, {
+    method:"PUT",
+    headers:{ Authorization:`Bearer ${token}`, "Content-Type":"application/json" },
+    body: JSON.stringify(updated)
+  });
+  if(res.ok){
+    alert("Appointment updated successfully");
+    await loadUsers();
+    await loadAppointment();
+  } else {
+    const errData = await res.json();
+    alert("Error updating appointment: " + (errData.error || res.status));
+  }
+}
+
+// Run on page load
+(async ()=>{
+  await loadUsers();
+  await loadAppointment();
+})();
+</script>
+</body>
+</html>

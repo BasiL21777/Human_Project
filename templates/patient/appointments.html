@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Patient Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --neuro-primary: #6e00ff;
+      --neuro-secondary: #00f0ff;
+      --neuro-dark: #0a0a1a;
+      --neuro-light: #e0f8ff;
+      --neuro-success: #00ff88;
+      --neuro-danger: #ff3860;
+      --neuro-warning: #ffb400;
+      --neuro-glass: rgba(255, 255, 255, 0.08);
+      --neuro-glass-border: rgba(255, 255, 255, 0.2);
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--neuro-dark);
+      color: var(--neuro-light);
+      min-height: 100vh;
+      margin: 0;
+      padding: 7rem 2rem 4rem;
+    }
+    .particles-background {
+      position: fixed; top:0; left:0; width:100%; height:100%; z-index:-1;
+      background: radial-gradient(ellipse at bottom, #0a0a1a 0%, #000000 100%);
+      overflow:hidden;
+    }
+    .particles-background::before {
+      content:""; position:absolute; width:100%; height:100%;
+      background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="0.5" fill="white" opacity="0.2"/></svg>');
+      background-size:2px 2px; opacity:0.3; animation:particlesMove 100s linear infinite;
+    }
+    @keyframes particlesMove {0%{background-position:0 0;}100%{background-position:1000px 1000px;}}
+    h2 {color:var(--neuro-secondary); margin-bottom:1.5rem; position:relative; padding-bottom:0.5rem; font-size:1.8rem;}
+    h2::after {content:''; position:absolute; bottom:0; left:0; width:50px; height:3px;
+      background:linear-gradient(90deg,var(--neuro-primary),var(--neuro-secondary)); border-radius:3px;}
+    .neuro-panel {backdrop-filter:blur(16px); background:var(--neuro-glass); border:1px solid var(--neuro-glass-border);
+      border-radius:16px; padding:2rem; margin-bottom:2rem;}
+    .neuro-btn {display:inline-flex; align-items:center; gap:0.5rem;
+      background:linear-gradient(135deg,var(--neuro-primary),var(--neuro-secondary));
+      color:white; padding:0.8rem 1.5rem; border:none; border-radius:8px; cursor:pointer;
+      transition:all 0.3s ease; font-weight:500; text-decoration:none; margin-bottom:1.5rem;}
+    .neuro-btn:hover {transform:translateY(-2px);}
+    table {width:100%; border-collapse:collapse; margin:1.5rem 0; backdrop-filter:blur(10px);
+      background:var(--neuro-glass); border:1px solid var(--neuro-glass-border); border-radius:12px; overflow:hidden;}
+    th,td {padding:1rem; text-align:left; border-bottom:1px solid var(--neuro-glass-border);}
+    th {background:rgba(110,0,255,0.1); color:var(--neuro-secondary);}
+    tr:hover {background:rgba(0,240,255,0.03);}
+    .status-badge {padding:0.3rem 0.6rem; border-radius:20px; font-size:0.8rem; font-weight:500;}
+    .status-scheduled {background:rgba(0,255,136,0.1); color:var(--neuro-success); border:1px solid var(--neuro-success);}
+    .status-completed {background:rgba(0,240,255,0.1); color:var(--neuro-secondary); border:1px solid var(--neuro-secondary);}
+    .status-cancelled {background:rgba(255,56,96,0.1); color:var(--neuro-danger); border:1px solid var(--neuro-danger);}
+    .action-link {color:var(--neuro-secondary); cursor:pointer;}
+    .action-link:hover {color:var(--neuro-primary);}
+    .action-danger {color:var(--neuro-danger);}
+    .empty-state {text-align:center; padding:2rem; color:rgba(224,248,255,0.5);}
+  </style>
+</head>
+<body>
+<div class="particles-background"></div>
+<div class="neuro-main">
+  <h2>Your Appointments</h2>
+  <a href="/patient/book_appointment.html" class="neuro-btn"><i class="fas fa-plus"></i> Book a New Appointment</a>
+  <div class="neuro-panel">
+    <table id="appointmentsTable" style="display:none;">
+      <thead>
+        <tr><th>Doctor</th><th>Date</th><th>Reason</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="appointmentsBody"></tbody>
+    </table>
+    <div id="emptyState" class="empty-state" style="display:none;">
+      <i class="fas fa-calendar-times" style="font-size:2rem; margin-bottom:1rem;"></i>
+      <p>You have no appointments scheduled.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:5000";
+
+// Guard: check token + role
+function checkAuth() {
+  const token = localStorage.getItem("access_token");
+  if (!token) {
+    window.location.href = "/auth/login.html";
+    return;
+  }
+  const payload = JSON.parse(atob(token.split(".")[1]));
+  const roles = payload.realm_access?.roles || [];
+  if (!roles.includes("Patient_ROLE")) {
+    alert("Unauthorized access");
+    window.location.href = "/auth/login.html";
+  }
+}
+
+// Fetch appointments
+async function loadAppointments() {
+  const token = localStorage.getItem("access_token");
+  try {
+    const res = await fetch(`${BASE_URL}/api/appointment/`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+
+    const table = document.getElementById("appointmentsTable");
+    const body = document.getElementById("appointmentsBody");
+    const empty = document.getElementById("emptyState");
+
+    body.innerHTML = "";
+    if (data.length > 0) {
+      table.style.display = "table";
+      empty.style.display = "none";
+      data.forEach(app => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${app.doctor_name || app.doctor_id}</td>
+          <td>${new Date(app.appointment_date).toLocaleString()}</td>
+          <td>${app.reason}</td>
+          <td><span class="status-badge status-${app.status}">${app.status}</span></td>
+          <td>${app.status === "scheduled" ?
+            `<span class="action-link action-danger" onclick="cancelAppointment('${app._id}')">
+              <i class="fas fa-times"></i> Cancel
+            </span>` : "&mdash;"}
+          </td>
+        `;
+        body.appendChild(row);
+      });
+    } else {
+      table.style.display = "none";
+      empty.style.display = "block";
+    }
+  } catch (err) {
+    console.error("Error loading appointments:", err);
+  }
+}
+
+// Cancel appointment
+async function cancelAppointment(id) {
+  const token = localStorage.getItem("access_token");
+  if (!confirm("Are you sure you want to cancel this appointment?")) return;
+  await fetch(`${BASE_URL}/api/appointment/${id}`, {
+    method: "DELETE",
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+  loadAppointments();
+}
+
+// Run on page load
+checkAuth();
+loadAppointments();
+</script>
+</body>
+</html>

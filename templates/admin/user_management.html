@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage User Roles</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .admin-container {
+      background-color: var(--neuro-dark, #0a0a1a);
+      color: var(--neuro-light, #e0f8ff);
+      padding: 2rem 3rem;
+      min-height: 70vh;
+      font-family: 'Poppins', sans-serif;
+    }
+    h1 { color: var(--neuro-primary, #6e00ff); user-select: none; }
+    .role-form { margin-bottom: 3rem; max-width: 600px; }
+    .form-group { margin-bottom: 1.5rem; }
+    label { display:block; margin-bottom:0.6rem; font-weight:600; }
+    select.form-control {
+      width:100%; padding:0.5rem 1rem; border-radius:30px;
+      border:1px solid rgba(255,255,255,0.2);
+      background-color:var(--neuro-dark,#0a0a1a); color:var(--neuro-light,#e0f8ff);
+      font-size:1rem; outline:none; box-shadow:inset 0 0 8px rgba(110,0,255,0.3);
+    }
+    button.btn-primary {
+      background-color:var(--neuro-success,#00ff88); color:var(--neuro-dark,#0a0a1a);
+      border:none; padding:0.65rem 2rem; border-radius:30px; font-weight:700; cursor:pointer;
+      box-shadow:0 5px 15px rgba(0,255,136,0.4); transition:all 0.3s ease;
+    }
+    button.btn-primary:hover { background-color:#00cc6a; box-shadow:0 8px 20px #00cc6a; transform:translateY(-2px); }
+    .table-responsive { max-width:100%; overflow-x:auto; }
+    .user-table { width:100%; border-collapse:collapse; font-size:0.95rem;
+      box-shadow:0 0 30px rgba(110,0,255,0.15); border-radius:15px; overflow:hidden; }
+    .user-table thead { background-color:var(--neuro-primary,#6e00ff); color:var(--neuro-dark,#0a0a1a); }
+    .user-table th,.user-table td { padding:0.75rem 1.25rem; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1); }
+    .user-table tbody tr:hover { background-color:rgba(110,0,255,0.1); }
+    .badge-success { background-color:#00ff88; color:#0a0a1a; padding:0.3rem 0.6rem; border-radius:12px; }
+    .badge-danger { background-color:#ff3860; color:#fff; padding:0.3rem 0.6rem; border-radius:12px; }
+    .btn-sm { padding:0.3rem 0.8rem; border-radius:20px; font-size:0.8rem; margin-right:0.3rem; cursor:pointer; border:none; }
+    .btn-success { background-color:#00ff88; color:#0a0a1a; }
+    .btn-danger { background-color:#ff3860; color:#fff; }
+    .btn-delete { background-color:#ff1444; color:#fff; }
+  </style>
+</head>
+<body>
+<div class="admin-container">
+  <h1>Manage User Roles</h1>
+
+  <div class="role-form">
+    <form id="roleForm">
+      <div class="form-group">
+        <label for="user_id">Select User:</label>
+        <select id="user_id" class="form-control" required>
+          <option value="">-- Select User --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="role">Role:</label>
+        <select id="role" class="form-control" required>
+          <option value="Patient_ROLE">Patient</option>
+          <option value="Doctor_ROLE">Doctor</option>
+          <option value="Admin_ROLE">Admin</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Update Role</button>
+    </form>
+  </div>
+
+  <!-- User Table -->
+  <div class="table-responsive">
+    <table class="user-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="usersBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:5000";
+
+async function loadUsers(){
+  const token = localStorage.getItem("access_token");
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/`, {
+      headers:{ Authorization:`Bearer ${token}` }
+    });
+    const json = await res.json();
+    const users = json.data || [];
+    const select = document.getElementById("user_id");
+    const body = document.getElementById("usersBody");
+    select.innerHTML = '<option value="">-- Select User --</option>';
+    body.innerHTML = "";
+    users.forEach(u=>{
+      const opt = document.createElement("option");
+      opt.value = u._id;
+      opt.textContent = `${u.email} (${u.role})`;
+      select.appendChild(opt);
+
+      const statusBadge = u.is_active
+        ? '<span class="badge-success">Active</span>'
+        : '<span class="badge-danger">Inactive</span>';
+
+      const actionBtns = `
+        ${u.is_active
+          ? `<button class="btn-sm btn-danger" onclick="toggleUser('${u._id}', false)">Deactivate</button>`
+          : `<button class="btn-sm btn-success" onclick="toggleUser('${u._id}', true)">Activate</button>`}
+        <button class="btn-sm btn-delete" onclick="deleteUser('${u._id}')">Delete</button>
+      `;
+
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${u._id}</td>
+        <td>${u.email}</td>
+        <td>${u.role}</td>
+        <td>${statusBadge}</td>
+        <td>${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ''}</td>
+        <td>${actionBtns}</td>
+      `;
+      body.appendChild(row);
+    });
+  } catch(err){ console.error("Error loading users:", err); }
+}
+
+async function toggleUser(id, newStatus){
+  const token = localStorage.getItem("access_token");
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/${id}`, {
+      method:"PUT",
+      headers:{ Authorization:`Bearer ${token}`, "Content-Type":"application/json" },
+      body: JSON.stringify({ is_active:newStatus })
+    });
+    if(res.ok){ loadUsers(); }
+    else {
+      const errData = await res.json();
+      alert("Error updating status: "+errData.error);
+    }
+  } catch(err){ console.error("Toggle error:", err); }
+}
+
+async function deleteUser(id){
+  const token = localStorage.getItem("access_token");
+  if(!confirm("Are you sure you want to delete this user?")) return;
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/${id}`, {
+      method:"DELETE",
+      headers:{ Authorization:`Bearer ${token}` }
+    });
+    if(res.ok){
+      alert("User deleted successfully");
+      loadUsers();
+    } else {
+      const errData = await res.json();
+      alert("Error deleting user: "+errData.error);
+    }
+  } catch(err){ console.error("Delete error:", err); }
+}
+
+document.getElementById("roleForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const token = localStorage.getItem("access_token");
+  const userId = document.getElementById("user_id").value;
+  const newRole = document.getElementById("role").value;
+  if(!userId){ alert("Select a user"); return; }
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/${userId}`, {
+      method:"PUT",
+      headers:{ Authorization:`Bearer ${token}`, "Content-Type":"application/json" },
+      body: JSON.stringify({ role:newRole })
+    });
+    if(res.ok){
+      alert("Role updated successfully");
+      loadUsers();
+    } else {
+      const errData = await res.json();
+      alert("Error updating role: "+errData.error);
+    }
+  } catch(err){ console.error("Update error:", err); }
+});
+
+// Run on page load
+loadUsers();
+</script>
+</body>
+</html>

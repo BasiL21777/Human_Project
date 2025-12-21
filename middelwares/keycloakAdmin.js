@@ -24,7 +24,6 @@ async function getAdminToken() {
 async function assignRealmRoleToUser(keycloakId, roleName) {
   const token = await getAdminToken();
 
-  // 1. Get the full role object from Keycloak
   const rolesRes = await axios.get(
     `${KEYCLOAK_URL}/admin/realms/${REALM}/roles/${roleName}`,
     { headers: { Authorization: `Bearer ${token}` } }
@@ -32,7 +31,6 @@ async function assignRealmRoleToUser(keycloakId, roleName) {
 
   const roleObject = rolesRes.data;
 
-  // 2. Assign the role to the user
   await axios.post(
     `${KEYCLOAK_URL}/admin/realms/${REALM}/users/${keycloakId}/role-mappings/realm`,
     [roleObject],
@@ -43,7 +41,6 @@ async function assignRealmRoleToUser(keycloakId, roleName) {
 async function removeRealmRoleFromUser(keycloakId, roleName) {
   const token = await getAdminToken();
 
-  // 1. Get the full role object from Keycloak
   const rolesRes = await axios.get(
     `${KEYCLOAK_URL}/admin/realms/${REALM}/roles/${roleName}`,
     { headers: { Authorization: `Bearer ${token}` } }
@@ -51,12 +48,11 @@ async function removeRealmRoleFromUser(keycloakId, roleName) {
 
   const roleObject = rolesRes.data;
 
-  // 2. Remove the role from the user
   await axios.delete(
     `${KEYCLOAK_URL}/admin/realms/${REALM}/users/${keycloakId}/role-mappings/realm`,
     {
       headers: { Authorization: `Bearer ${token}` },
-      data: [roleObject], // DELETE requires body with role object
+      data: [roleObject],
     }
   );
 }
@@ -76,8 +72,23 @@ async function updateKeycloakUser(keycloakId, data) {
   );
 }
 
+/**
+ * Fetch all realm roles currently assigned to a user
+ */
+async function getUserRealmRoles(keycloakId) {
+  const token = await getAdminToken();
+
+  const res = await axios.get(
+    `${KEYCLOAK_URL}/admin/realms/${REALM}/users/${keycloakId}/role-mappings/realm`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  return res.data; // array of role objects
+}
+
 module.exports = {
   updateKeycloakUser,
   assignRealmRoleToUser,
-  removeRealmRoleFromUser
+  removeRealmRoleFromUser,
+  getUserRealmRoles
 };

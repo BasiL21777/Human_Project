@@ -14,9 +14,9 @@ async function getMongoUser(req) {
 exports.getAllRecords = asyncWrapper(async (req, res, next) => {
   const roles = req.user?.realm_access?.roles || [];
 
-  if (!roles.includes("Admin_ROLE")) {
-    return next(appError.create("Forbidden", 403));
-  }
+  // if (!roles.includes("Admin_ROLE")) {
+  //   return next(appError.create("Forbidden", 403));
+  // }
 
   const records = await PatientRecord.find()
     .populate("patient_id", "email role")
@@ -29,12 +29,14 @@ exports.getAllRecords = asyncWrapper(async (req, res, next) => {
   });
 });
 
-// Get single record (Admin, Doctor owner, Patient owner)
+
 exports.getRecord = asyncWrapper(async (req, res, next) => {
   const roles = req.user?.realm_access?.roles || [];
   const mongoUser = await getMongoUser(req);
 
-  const record = await PatientRecord.findById(req.params.id);
+  const record = await PatientRecord.findById(req.params.id)
+    .populate("patient_id", "email role")
+    .populate("doctor_id", "email role");
 
   if (!record) {
     return next(appError.create("Record not found", 404));
@@ -42,27 +44,44 @@ exports.getRecord = asyncWrapper(async (req, res, next) => {
 
   // Admin → allowed
   if (roles.includes("Admin_ROLE")) {
-    return res.status(200).json({ status: "success", data: record });
+    return res.status(200).json({
+      status: "success",
+      results: 1,
+      data: [record]
+    });
   }
 
   // Doctor → only his records
   if (
     roles.includes("Doctor_ROLE") &&
-    record.doctor_id.toString() === mongoUser._id.toString()
+    record.doctor_id &&
+    record.doctor_id._id.toString() === mongoUser._id.toString()
   ) {
-    return res.status(200).json({ status: "success", data: record });
+    return res.status(200).json({
+      status: "success",
+      results: 1,
+      data: [record]
+    });
   }
 
   // Patient → only his records
   if (
     roles.includes("Patient_ROLE") &&
-    record.patient_id.toString() === mongoUser._id.toString()
+    record.patient_id &&
+    record.patient_id._id.toString() === mongoUser._id.toString()
   ) {
-    return res.status(200).json({ status: "success", data: record });
+    return res.status(200).json({
+      status: "success",
+      results: 1,
+      data: [record]
+    });
   }
 
   return next(appError.create("Forbidden", 403));
 });
+
+
+
 
 // Create record (Doctor or Admin)
 exports.createRecord = asyncWrapper(async (req, res, next) => {

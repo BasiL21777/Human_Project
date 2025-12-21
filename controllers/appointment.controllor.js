@@ -14,9 +14,9 @@ async function getMongoUser(req) {
 exports.getAllAppointments = asyncWrapper(async (req, res, next) => {
   const roles = req.user?.realm_access?.roles || [];
 
-  if (!roles.includes("Admin_ROLE")) {
-    return next(appError.create("Forbidden", 403));
-  }
+  // if (!roles.includes("Admin_ROLE")) {
+  //   return next(appError.create("Forbidden", 403));
+  // }
 
   const appointments = await Appointment.find()
     .populate("patient_id", "email role")
@@ -29,12 +29,16 @@ exports.getAllAppointments = asyncWrapper(async (req, res, next) => {
   });
 });
 
+
 // Get appointment by ID (Admin, Doctor owner, Patient owner)
 exports.getAppointment = asyncWrapper(async (req, res, next) => {
   const roles = req.user?.realm_access?.roles || [];
   const mongoUser = await getMongoUser(req);
 
-  const appointment = await Appointment.findById(req.params.id);
+  // populate patient_id and doctor_id with email + role
+  const appointment = await Appointment.findById(req.params.id)
+    .populate("patient_id", "email role")
+    .populate("doctor_id", "email role");
 
   if (!appointment) {
     return next(appError.create("Appointment not found", 404));
@@ -48,7 +52,8 @@ exports.getAppointment = asyncWrapper(async (req, res, next) => {
   // Doctor → only his appointments
   if (
     roles.includes("Doctor_ROLE") &&
-    appointment.doctor_id?.toString() === mongoUser?._id.toString()
+    appointment.doctor_id &&
+    appointment.doctor_id._id.toString() === mongoUser?._id.toString()
   ) {
     return res.status(200).json({ status: "success", data: appointment });
   }
@@ -56,13 +61,15 @@ exports.getAppointment = asyncWrapper(async (req, res, next) => {
   // Patient → only his appointments
   if (
     roles.includes("Patient_ROLE") &&
-    appointment.patient_id?.toString() === mongoUser?._id.toString()
+    appointment.patient_id &&
+    appointment.patient_id._id.toString() === mongoUser?._id.toString()
   ) {
     return res.status(200).json({ status: "success", data: appointment });
   }
 
   return next(appError.create("Forbidden", 403));
 });
+
 
 // Create appointment (Patient or Admin)
 exports.createAppointment = asyncWrapper(async (req, res, next) => {
@@ -119,9 +126,9 @@ exports.updateAppointment = asyncWrapper(async (req, res, next) => {
 exports.deleteAppointment = asyncWrapper(async (req, res, next) => {
   const roles = req.user?.realm_access?.roles || [];
 
-  if (!roles.includes("Admin_ROLE")) {
-    return next(appError.create("Forbidden", 403));
-  }
+  // if (!roles.includes("Admin_ROLE")) {
+  //   return next(appError.create("Forbidden", 403));
+  // }
 
   const appointment = await Appointment.findByIdAndDelete(req.params.id);
 

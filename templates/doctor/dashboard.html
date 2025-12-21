@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Doctor Dashboard</title>
+  <style>
+    .admin-container {
+      max-width: 900px;
+      margin: 2rem auto;
+      background-color: #0a0a1a;
+      padding: 2rem 3rem;
+      border-radius: 15px;
+      box-shadow: 0 0 30px rgba(110, 0, 255, 0.3);
+      color: #e0f8ff;
+      font-family: 'Poppins', sans-serif;
+    }
+    h2 {
+      color: #6e00ff;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    h3 {
+      margin-top: 2rem;
+      color: #00ff88;
+    }
+    a {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      color: #6e00ff;
+      font-weight: 600;
+      text-decoration: none;
+      user-select: none;
+      transition: color 0.3s ease;
+    }
+    a:hover {
+      color: #00ff88;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #12122a;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(110, 0, 255, 0.2);
+    }
+    th, td {
+      padding: 0.9rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      color: #d0f7ff;
+    }
+    th {
+      background-color: #1e1e40;
+      font-weight: 700;
+      color: #00ff88;
+    }
+    tbody tr:hover {
+      background-color: #2c2c5c;
+    }
+    p {
+      color: #a0c8e8;
+    }
+    .logout-btn {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.6rem 1.2rem;
+      background-color: #6e00ff;
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .logout-btn:hover {
+      background-color: #00ff88;
+      color: #0a0a1a;
+    }
+  </style>
+</head>
+<body>
+<div class="admin-container">
+  <h2 id="welcome">Welcome, Doctor!</h2>
+
+  <p><a href="/doctor/patient_records.html">Manage Patient Records</a></p>
+
+  <h3>Your Appointments</h3>
+  <table id="appointmentsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Patient</th>
+        <th>Date</th>
+        <th>Reason</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="appointmentsBody"></tbody>
+  </table>
+  <p id="appointmentsEmpty" style="display:none;">No appointments scheduled.</p>
+
+  <!-- Logout button -->
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:5000";
+let currentDoctorId = null;
+
+function getTokenPayload() {
+  const token = localStorage.getItem("access_token");
+  if (!token) return null;
+  try {
+    return JSON.parse(atob(token.split(".")[1]));
+  } catch {
+    return null;
+  }
+}
+
+async function resolveDoctorId() {
+  const token = localStorage.getItem("access_token");
+  const payload = getTokenPayload();
+  if (!payload) return null;
+  const email = payload.email || payload.preferred_username;
+  try {
+    const res = await fetch(`${BASE_URL}/api/users/`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    const users = Array.isArray(json.data) ? json.data : [];
+    const me = users.find(u => u.email === email && u.role === "Doctor_ROLE");
+    return me ? me._id : null;
+  } catch (err) {
+    console.error("Error resolving doctor ID:", err);
+    return null;
+  }
+}
+
+function setWelcome() {
+  const payload = getTokenPayload();
+  if (payload) {
+    document.getElementById("welcome").textContent =
+      "Welcome, Dr. " + (payload.email || payload.preferred_username || "Doctor") + "!";
+  }
+}
+
+async function loadAppointments() {
+  const token = localStorage.getItem("access_token");
+  if (!currentDoctorId) {
+    currentDoctorId = await resolveDoctorId();
+  }
+  const res = await fetch(`${BASE_URL}/api/appointment/`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const json = await res.json();
+  const appointments = Array.isArray(json.data) ? json.data : [];
+
+  // ✅ filter only appointments assigned to this doctor
+  const myAppointments = appointments.filter(app => app.doctor_id?._id === currentDoctorId);
+
+  const table = document.getElementById("appointmentsTable");
+  const body = document.getElementById("appointmentsBody");
+  const empty = document.getElementById("appointmentsEmpty");
+  body.innerHTML = "";
+
+  if (myAppointments.length === 0) {
+    table.style.display = "none";
+    empty.style.display = "block";
+    return;
+  }
+
+  table.style.display = "table";
+  empty.style.display = "none";
+
+  myAppointments.forEach(app => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${app.patient_id?.email || "-"}</td>
+      <td>${app.appointment_date ? new Date(app.appointment_date).toLocaleString() : "-"}</td>
+      <td>${app.reason || "-"}</td>
+      <td>${app.status || "-"}</td>
+    `;
+    body.appendChild(row);
+  });
+}
+
+// Logout function
+async function logout() {
+  const refreshToken = localStorage.getItem("refresh_token");
+  try {
+    if (refreshToken) {
+      await fetch(`${BASE_URL}/auth/logout?refresh_token=${refreshToken}`);
+    }
+  } catch (err) {
+    console.error("Logout error:", err);
+  }
+  localStorage.clear();
+  window.location.href = "/auth/login.html";
+}
+
+// Init
+setWelcome();
+loadAppointments();
+</script>
+</body>
+</html>

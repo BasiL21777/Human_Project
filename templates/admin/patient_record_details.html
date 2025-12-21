@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Patient Record Details</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .admin-container {
+      background-color: var(--neuro-dark, #0a0a1a);
+      color: var(--neuro-light, #e0f8ff);
+      padding: 2rem 3rem;
+      min-height: 70vh;
+      font-family: 'Poppins', sans-serif;
+    }
+    h1 { color: var(--neuro-primary, #6e00ff); user-select: none; }
+    .table-responsive { max-width:100%; overflow-x:auto; margin-top:2rem; }
+    .details-table { width:100%; border-collapse:collapse; font-size:0.95rem;
+      box-shadow:0 0 30px rgba(110,0,255,0.15); border-radius:15px; overflow:hidden; }
+    .details-table th,.details-table td { padding:0.75rem 1.25rem; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1); }
+    .details-table tbody tr:hover { background-color:rgba(110,0,255,0.1); }
+    .btn-primary { background-color:#00ff88; color:#0a0a1a; border:none; padding:0.65rem 2rem; border-radius:30px; font-weight:700; cursor:pointer; margin-top:1rem; }
+    .btn-primary:hover { background-color:#00cc6a; }
+    input, select, textarea { width:100%; padding:0.4rem; border-radius:8px; border:1px solid #ccc; }
+  </style>
+</head>
+<body>
+<div class="admin-container">
+  <h1>Patient Record Details</h1>
+
+  <div class="table-responsive">
+    <table class="details-table">
+      <thead>
+        <tr><th>Field</th><th>Value</th></tr>
+      </thead>
+      <tbody id="detailsBody"></tbody>
+    </table>
+  </div>
+  <button class="btn-primary" onclick="applyChanges()">Apply Changes</button>
+</div>
+
+<script>
+const BASE_URL = "http://localhost:5000";
+const params = new URLSearchParams(window.location.search);
+const recordId = params.get("id");
+let recordData = {};
+let usersList = [];
+
+async function loadUsers(){
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(`${BASE_URL}/api/users/`, {
+    headers:{ Authorization:`Bearer ${token}` }
+  });
+  const json = await res.json();
+  usersList = json.data || [];
+}
+
+function buildSelect(users, currentId){
+  return users.map(u =>
+    `<option value="${u._id}" ${u._id===currentId?'selected':''}>${u.email}</option>`
+  ).join('');
+}
+
+async function loadRecord(){
+  const token = localStorage.getItem("access_token");
+  if(!recordId){ alert("No record ID provided"); return; }
+  const res = await fetch(`${BASE_URL}/patient_Record/${recordId}`, {
+    headers:{ Authorization:`Bearer ${token}` }
+  });
+  const json = await res.json();
+  // FIX: data is an array
+  recordData = Array.isArray(json.data) ? json.data[0] : json.data;
+
+  const patients = usersList.filter(u => u.role==="Patient_ROLE");
+  const doctors  = usersList.filter(u => u.role==="Doctor_ROLE");
+
+  const body = document.getElementById("detailsBody");
+  body.innerHTML = `
+    <tr><td>ID</td><td>${recordData._id}</td></tr>
+    <tr><td>Patient</td><td>
+      <select id="patient_id">${buildSelect(patients, recordData.patient_id?._id)}</select>
+    </td></tr>
+    <tr><td>Doctor</td><td>
+      <select id="doctor_id">${buildSelect(doctors, recordData.doctor_id?._id)}</select>
+    </td></tr>
+    <tr><td>Diagnosis</td><td><input type="text" id="diagnosis" value="${recordData.diagnosis||''}"></td></tr>
+    <tr><td>Prescription</td><td><input type="text" id="prescription" value="${recordData.prescription||''}"></td></tr>
+    <tr><td>Notes</td><td><textarea id="notes">${recordData.notes||''}</textarea></td></tr>
+    <tr><td>Draft</td><td>
+      <select id="is_draft">
+        <option value="true" ${recordData.is_draft?"selected":""}>Draft</option>
+        <option value="false" ${!recordData.is_draft?"selected":""}>Final</option>
+      </select>
+    </td></tr>
+    <tr><td>Created</td><td>${recordData.created_at ? new Date(recordData.created_at).toLocaleDateString() : ''}</td></tr>
+    <tr><td>Updated</td><td>${recordData.updated_at ? new Date(recordData.updated_at).toLocaleDateString() : ''}</td></tr>
+  `;
+}
+
+async function applyChanges(){
+  const token = localStorage.getItem("access_token");
+  const updated = {
+    patient_id: document.getElementById("patient_id").value,
+    doctor_id: document.getElementById("doctor_id").value,
+    diagnosis: document.getElementById("diagnosis").value,
+    prescription: document.getElementById("prescription").value,
+    notes: document.getElementById("notes").value,
+    is_draft: document.getElementById("is_draft").value === "true"
+  };
+  const res = await fetch(`${BASE_URL}/patient_Record/${recordId}`, {
+    method:"PUT",
+    headers:{ Authorization:`Bearer ${token}`, "Content-Type":"application/json" },
+    body: JSON.stringify(updated)
+  });
+  if(res.ok){
+    alert("Record updated successfully");
+    await loadUsers();
+    await loadRecord();
+  } else {
+    const errData = await res.json();
+    alert("Error updating record: " + (errData.error || res.status));
+  }
+}
+
+// Run on page load
+(async ()=>{
+  await loadUsers();
+  await loadRecord();
+})();
+</script>
+</body>
+</html>
